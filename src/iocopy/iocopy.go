@@ -5,28 +5,31 @@ import (
     "fmt"
 )
 
-func IoCopy(conn_src net.Conn, conn_dst net.Conn, ch_err chan string){
+
+func IoCopy(process func([]byte) []byte, conn_src net.Conn, conn_dst net.Conn, ch_err chan string){
     println("IoCopy. RemoteAddr:",conn_src.RemoteAddr().String())
     defer println("IoCopy leave...")
-    buf := make([]byte, 4096)
+    
+    buf := make([]byte, 65536)
     for {
-        n,err := conn_src.Read(buf)
+        nr,errr := conn_src.Read(buf)
         println("IoCopy,Read. RemoteAddr:",conn_src.RemoteAddr().String())
-        if err != nil {
-            println("Error reading :", err.Error()) 
+        if errr != nil {
+            println("Error reading :", errr.Error()) 
             select {
-                case ch_err <- err.Error():
+                case ch_err <- errr.Error():
                 default:
             }
             return
         }
         
-        n, err = conn_dst.Write(buf[0:n]) 
-        fmt.Printf("IoCopy,Write. RemoteAddr:%s, n:%d \n",conn_dst.RemoteAddr().String(),n)
-        if err != nil { 
-            println("Error send :", err.Error()) 
+        dataw :=process(buf[0:nr])
+        nw, errw := conn_dst.Write(dataw)
+        fmt.Printf("IoCopy,Write. RemoteAddr:%s, nw:%d \n",conn_dst.RemoteAddr().String(),nw)
+        if errw != nil { 
+            println("Error send :", errw.Error()) 
             select {
-                case ch_err <- err.Error():
+                case ch_err <- errw.Error():
                 default:
             }
             return

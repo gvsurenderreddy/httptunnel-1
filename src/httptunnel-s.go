@@ -3,49 +3,14 @@ package main
 import (
     "fmt"
     "net"
-    "time"
     "io/ioutil"
     "encoding/json"
-    "./iocopy"
+    "./process"
 )
 
-var addr_listen =""
-var addr_connect =""
-var puse ="0"
-var phost =""
-var pport =""
-var puser =""
-var ppwd =""
-    
-func Server(conn_listen net.Conn) {
-    println("Server. RemoteAddr:",conn_listen.RemoteAddr().String())
-    defer println("Server leave...")
-    defer conn_listen.Close()
-    
-    // connect to next.
-    conn_connect, err := net.Dial("tcp", addr_connect)
-    if err != nil {
-        println("connect failed.", err.Error())
-        return
-    }
-    defer conn_connect.Close()
-    
-    ch_err :=make(chan string)
-    go iocopy.IoCopy(conn_listen, conn_connect, ch_err)
-    go iocopy.IoCopy(conn_connect, conn_listen, ch_err)
-    
-    for{
-        select {
-            case <- time.After(time.Second*6000):
-                println("time out")
-            case <-  ch_err:
-                return
-        }
-    }
-}
- 
-    
 func main() {
+    mode :=1
+    
     // 配置信息默认值
     confStr := `{
         "listen": "0.0.0.0:18080", 
@@ -67,8 +32,8 @@ func main() {
         fmt.Println("error in translating,", err.Error())  
         return  
     }
-    addr_listen =conf["listen"].(string)
-    addr_connect =conf["connect"].(string)
+    addr_listen :=conf["listen"].(string)
+    addr_connect :=conf["connect"].(string)
     
     listener, err := net.Listen("tcp", addr_listen)
     if err != nil { 
@@ -83,7 +48,8 @@ func main() {
             println("Error accept:", err.Error())
             return
         }
-        go Server(conn_listen)
+        
+        go process.Server(mode, conn_listen, addr_connect, "0", "", "", "", "")
     }
 }
 
